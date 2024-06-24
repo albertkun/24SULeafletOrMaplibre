@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Leaflet and MapLibre GL Toggle Map</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+	<link rel="stylesheet" href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css"/>
+	<style>
+		#mapLeaflet, #mapMapLibre { height: 100vh; }
+		.hidden { display: none; }
+	</style>
+</head>
+<body>
+	<button onclick="toggleMaps()">Toggle Maps</button>
+	<div id="mapLeaflet" class="hidden"></div>
+	<div id="mapMapLibre"></div>
+
+	<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+	<script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
+	<script>
+		var mapLeafletInitialized = false;
+		var mapLeaflet;
+		var mapMapLibre = new maplibregl.Map({
+			container: 'mapMapLibre',
+			style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+			center: [-150.7967, 20.3319],
+			zoom: 1
+		});
+
+		function toggleMaps() {
+			var mapLibreDiv = document.getElementById('mapMapLibre');
+			var leafletDiv = document.getElementById('mapLeaflet');
+			mapLibreDiv.classList.toggle('hidden');
+			leafletDiv.classList.toggle('hidden');
+			if (!mapLeafletInitialized && !leafletDiv.classList.contains('hidden')) {
+				initializeLeaflet();
+			}
+		}
+
+		function initializeLeaflet() {
+			mapLeaflet = L.map('mapLeaflet').setView([-150.7967, 20.3319], 1);
+			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				maxZoom: 19,
+			}).addTo(mapLeaflet);
+			mapLeafletInitialized = true;
+			loadGeoJSON();
+		}
+
+		function loadGeoJSON() {
+			fetch('locations.geojson').then(function(response) {
+				return response.json();
+			}).then(function(data) {
+				if (mapLeafletInitialized) {
+					// Add GeoJSON to Leaflet map
+					var geoJsonLayer = L.geoJSON(data).addTo(mapLeaflet);
+				}
+
+				// Add GeoJSON to MapLibre GL map
+				mapMapLibre.on('load', function() {
+					mapMapLibre.addSource('locations', {
+						type: 'geojson',
+						data: data
+					});
+					mapMapLibre.addLayer({
+						id: 'locations',
+						type: 'circle',
+						source: 'locations',
+						paint: {
+							'circle-radius': 10,
+							'circle-color': '#007cbf'
+						}
+					});
+
+				});
+			});
+		}
+
+		// Load and display GeoJSON on MapLibre map initially
+		loadGeoJSON();
+	</script>
+</body>
+</html>
